@@ -31,7 +31,8 @@ class Pipeline:
             config_file = f"{path}/{config_file}"
         else:
             from ..utils import model_hub
-            config_file = model_hub.hf_hub_download(path, config_file)
+            repo_dir = model_hub.get_repo_dir(path)
+            config_file = os.path.join(repo_dir, config_file)
 
         with open(config_file, 'r') as f:
             args = json.load(f)['args']

@@ -38,7 +38,7 @@ def from_pretrained(path: str):
         config_file = f"{path}/pipeline.json"
     else:
         from ..utils import model_hub
-        config_file = model_hub.hf_hub_download(path, "pipeline.json")
+        config_file = os.path.join(model_hub.get_repo_dir(path), "pipeline.json")
 
     with open(config_file, 'r') as f:
         config = json.load(f)
