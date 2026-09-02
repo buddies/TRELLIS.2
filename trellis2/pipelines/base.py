@@ -30,8 +30,8 @@ class Pipeline:
         if is_local:
             config_file = f"{path}/{config_file}"
         else:
-            from huggingface_hub import hf_hub_download
-            config_file = hf_hub_download(path, config_file)
+            from ..utils import model_hub
+            config_file = model_hub.hf_hub_download(path, config_file)
 
         with open(config_file, 'r') as f:
             args = json.load(f)['args']

@@ -5,6 +5,7 @@ import torch
 from transformers import AutoTokenizer, CLIPTextModel
 
 from ....utils import dist_utils
+from ....utils import model_hub
 
 
 class TextConditionedMixin:
@@ -25,8 +26,9 @@ class TextConditionedMixin:
         """
         # load model
         with dist_utils.local_master_first():
-            model = CLIPTextModel.from_pretrained(self.text_cond_model_name)
-            tokenizer = AutoTokenizer.from_pretrained(self.text_cond_model_name)
+            local_dir = model_hub.snapshot_download(self.text_cond_model_name)
+            model = CLIPTextModel.from_pretrained(local_dir)
+            tokenizer = AutoTokenizer.from_pretrained(local_dir)
         model.eval()
         model = model.cuda()
         self.text_cond_model = {

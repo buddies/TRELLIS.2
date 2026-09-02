@@ -4,11 +4,14 @@ import torch
 from torchvision import transforms
 from PIL import Image
 
+from ...utils import model_hub
+
 
 class BiRefNet:
     def __init__(self, model_name: str = "ZhengPeng7/BiRefNet"):
+        local_dir = model_hub.snapshot_download(model_name)
         self.model = AutoModelForImageSegmentation.from_pretrained(
-            model_name, trust_remote_code=True
+            local_dir, trust_remote_code=True
         )
         self.model.eval()
         self.transform_image = transforms.Compose(
