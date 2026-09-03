@@ -8,6 +8,7 @@ from PIL import Image
 
 from ....utils import dist_utils
 from ....utils import model_hub
+from ....modules.image_feature_extractor import resolve_dinov3_layers
 
 
 class DinoV2FeatureExtractor:
@@ -87,7 +88,7 @@ class DinoV3FeatureExtractor:
         hidden_states = self.model.embeddings(image, bool_masked_pos=None)
         position_embeddings = self.model.rope_embeddings(image)
 
-        for i, layer_module in enumerate(self.model.layer):
+        for layer_module in resolve_dinov3_layers(self.model):
             hidden_states = layer_module(
                 hidden_states,
                 position_embeddings=position_embeddings,

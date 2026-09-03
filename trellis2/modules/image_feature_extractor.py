@@ -9,6 +9,29 @@ from PIL import Image
 from ..utils import model_hub
 
 
+def resolve_dinov3_layers(model):
+    """Return the ordered list of transformer layer modules for a
+    ``DINOv3ViTModel``, tolerating differences between ``transformers`` versions.
+
+    - old: ``model.layer``
+    - new: ``model.model.layer`` (``model.model`` is a ``DINOv3ViTEncoder``)
+    - variant: ``model.encoder.layer``
+    """
+    if hasattr(model, 'layer'):
+        return model.layer
+    if hasattr(model, 'encoder') and hasattr(model.encoder, 'layer'):
+        return model.encoder.layer
+    if hasattr(model, 'model'):
+        if hasattr(model.model, 'layer'):
+            return model.model.layer
+        if hasattr(model.model, 'encoder') and hasattr(model.model.encoder, 'layer'):
+            return model.model.encoder.layer
+    raise AttributeError(
+        f"Could not locate transformer layers in {type(model).__name__}. "
+        "Please check the installed `transformers` version."
+    )
+
+
 class DinoV2FeatureExtractor:
     """
     Feature extractor for DINOv2 models.
@@ -86,7 +109,7 @@ class DinoV3FeatureExtractor:
         hidden_states = self.model.embeddings(image, bool_masked_pos=None)
         position_embeddings = self.model.rope_embeddings(image)
 
-        for i, layer_module in enumerate(self.model.layer):
+        for layer_module in resolve_dinov3_layers(self.model):
             hidden_states = layer_module(
                 hidden_states,
                 position_embeddings=position_embeddings,
