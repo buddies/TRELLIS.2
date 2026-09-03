@@ -13,6 +13,15 @@ import os
 from typing import *
 
 
+# ModelScope reads these env vars once, when ``modelscope`` is imported. Set
+# sensible defaults *before* that import so that multi-GB weight files download
+# with several parallel connections instead of a single slow stream.
+#   MODELSCOPE_DOWNLOAD_PARALLELS     -> parallel connections per large file
+#   MODELSCOPE_PARALLEL_DOWNLOAD_THRESHOLD_MB -> use parallel path above this size
+os.environ.setdefault('MODELSCOPE_DOWNLOAD_PARALLELS', '16')
+os.environ.setdefault('MODELSCOPE_PARALLEL_DOWNLOAD_THRESHOLD_MB', '128')
+
+
 # Hugging Face repo id -> ModelScope repo id.
 # Repos that share the same id on both hubs (the common case, e.g.
 # ``microsoft/...`` and ``facebook/...``) are omitted.
