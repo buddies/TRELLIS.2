@@ -154,6 +154,18 @@ pip install -U modelscope
 ```
 并确认该仓库在 ModelScope 存在且公开。
 
+**4. 看不到实时下载速度和进度**
+ModelScope 默认用 `tqdm` 显示下载进度，但 tqdm 在**无 TTY 的容器/日志环境（如 K8s pod、后台运行）会自动禁用**，所以日志里看不到进度和速度。
+
+`model_hub.py` 已内置一个控制台进度回调（`_ConsoleProgressCallback`），每次下载会打印：
+```
+[ModelScope] 开始下载 xxx.safetensors (1234.5 MB)
+[ModelScope] xxx.safetensors: 512.0/1234.5 MB (41.5%)  45.20 MB/s
+[ModelScope] 完成 xxx.safetensors (1234.5 MB, 用时 27.4s)
+```
+- 在有 TTY 的终端里，仍由 tqdm 显示美观进度条；在无 TTY 环境则自动切换到控制台输出。
+- 若仍不显示，请确认 stdout 未被重定向丢弃，或临时用 `python -u app.py` 关闭缓冲。
+
 ## 附：首次运行提速思路
 
 - 预先在构建镜像或初始化容器时用 `snapshot_download` 把模型下载到持久卷。

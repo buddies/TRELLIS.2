@@ -10,6 +10,8 @@ This lets downstream code keep using the familiar Hugging Face-style repo ids
 and transparently fetch them from ModelScope instead.
 """
 import os
+import sys
+import time
 from typing import *
 
 
@@ -42,10 +44,52 @@ _DEFAULT_MAX_WORKERS = int(os.environ.get('MODELSCOPE_MAX_WORKERS', '8'))
 _repo_dir_cache: dict = {}
 
 
+class _ConsoleProgressCallback:
+    """Duck-typed ModelScope progress callback that prints per-file download
+    progress and real-time speed even when there is no TTY (e.g. K8s pod logs,
+    where tqdm automatically disables itself).
+
+    ModelScope instantiates ``callback(filename, file_size)`` and then calls
+    ``update(bytes_delta)`` / ``end()`` on it.
+    """
+    def __init__(self, filename: str, file_size: int):
+        self.filename = filename
+        self.file_size = file_size or 0
+        self.downloaded = 0
+        self.start = time.time()
+        if not sys.stdout.isatty():
+            print(f"\n[ModelScope] 开始下载 {filename} ({self.file_size / 1e6:.1f} MB)", flush=True)
+
+    def update(self, size: int):
+        self.downloaded += size
+        if sys.stdout.isatty():
+            return
+        elapsed = time.time() - self.start
+        speed = (self.downloaded / elapsed / 1e6) if elapsed > 0 else 0.0
+        pct = (self.downloaded / self.file_size * 100) if self.file_size else 0.0
+        print(
+            f"\r[ModelScope] {self.filename}: "
+            f"{self.downloaded / 1e6:.1f}/{self.file_size / 1e6:.1f} MB "
+            f"({pct:5.1f}%)  {speed:6.2f} MB/s",
+            end="", flush=True,
+        )
+
+    def end(self):
+        if sys.stdout.isatty():
+            return
+        elapsed = time.time() - self.start
+        print(
+            f"\r[ModelScope] 完成 {self.filename} "
+            f"({self.downloaded / 1e6:.1f} MB, 用时 {elapsed:.1f}s)\n",
+            flush=True,
+        )
+
+
 def _modelscope_snapshot(model_id: str, revision, allow_file_pattern=None, ignore_file_pattern=None) -> str:
     """Wrapper around ``modelscope.snapshot_download`` that uses more parallel
-    workers, and falls back to default args on older versions that do not accept
-    ``max_workers``."""
+    workers and attaches a console progress callback (so progress/speed is shown
+    even without a TTY). Falls back to default args on older versions that do not
+    accept ``max_workers``."""
     from modelscope import snapshot_download as _ms_snapshot
     try:
         return _ms_snapshot(
@@ -54,6 +98,7 @@ def _modelscope_snapshot(model_id: str, revision, allow_file_pattern=None, ignor
             allow_file_pattern=allow_file_pattern,
             ignore_file_pattern=ignore_file_pattern,
             max_workers=_DEFAULT_MAX_WORKERS,
+            progress_callbacks=[_ConsoleProgressCallback],
         )
     except TypeError:
         return _ms_snapshot(
@@ -61,6 +106,7 @@ def _modelscope_snapshot(model_id: str, revision, allow_file_pattern=None, ignor
             revision=revision,
             allow_file_pattern=allow_file_pattern,
             ignore_file_pattern=ignore_file_pattern,
+            progress_callbacks=[_ConsoleProgressCallback],
         )
 
 
