@@ -69,12 +69,14 @@ fi
 echo "[SETUP] [SYSTEM INFO] END: Detected platform=$PLATFORM"
 
 if [ "$NEW_ENV" = true ] ; then
-    echo "[SETUP] [NEW-ENV] START: Create new conda environment"
+    echo "[SETUP] [NEW-ENV] START: Create new pyenv environment"
     # use pyenv to create a virtual environment
     pyenv virtualenv 3.11.0 trellis2
     touch .python-version
     echo "trellis2" > .python-version
     pyenv activate trellis2
+
+    pip install --upgrade pip setuptools wheel;
 
     if [ "$PLATFORM" = "cuda" ] ; then
         pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124
@@ -91,25 +93,8 @@ if [ "$BASIC" = true ] ; then
     sudo apt install -y libjpeg-dev
     pip install pillow-simd
     pip install kornia timm
+    pip install psutil
     echo "[SETUP] [BASIC] END: Basic dependencies installed"
-fi
-
-if [ "$FLASHATTN" = true ] ; then
-    echo "[SETUP] [FLASH-ATTN] START: Install flash-attention"
-    if [ "$PLATFORM" = "cuda" ] ; then
-        pip install flash-attn==2.7.4.post1 --no-build-isolation
-    elif [ "$PLATFORM" = "hip" ] ; then
-        echo "[FLASHATTN] Prebuilt binaries not found. Building from source..."
-        mkdir -p /tmp/extensions
-        git clone --recursive https://github.com/ROCm/flash-attention.git /tmp/extensions/flash-attention
-        cd /tmp/extensions/flash-attention
-        git checkout tags/v2.7.3-cktile
-        GPU_ARCHS=gfx942 python setup.py install #MI300 series
-        cd $WORKDIR
-    else
-        echo "[FLASHATTN] Unsupported platform: $PLATFORM"
-    fi
-    echo "[SETUP] [FLASH-ATTN] END: flash-attention installed"
 fi
 
 if [ "$NVDIFFRAST" = true ] ; then
@@ -144,20 +129,38 @@ if [ "$CUMESH" = true ] ; then
     echo "[SETUP] [CUMESH] END: CuMesh installed"
 fi
 
-if [ "$FLEXGEMM" = true ] ; then
-    echo "[SETUP] [FLEXGEMM] START: Install FlexGEMM"
-    mkdir -p /tmp/extensions
-    git clone --branch v1.0.0 https://github.com/JeffreyXiang/FlexGEMM.git /tmp/extensions/FlexGEMM --recursive
-    pip install /tmp/extensions/FlexGEMM --no-build-isolation
-    echo "[SETUP] [FLEXGEMM] END: FlexGEMM installed"
-fi
-
 if [ "$OVOXEL" = true ] ; then
     echo "[SETUP] [O-VOXEL] START: Install o-voxel"
     mkdir -p /tmp/extensions
     cp -r o-voxel /tmp/extensions/o-voxel
     pip install /tmp/extensions/o-voxel --no-build-isolation
     echo "[SETUP] [O-VOXEL] END: o-voxel installed"
+fi
+
+if [ "$FLASHATTN" = true ] ; then
+    echo "[SETUP] [FLASH-ATTN] START: Install flash-attention"
+    if [ "$PLATFORM" = "cuda" ] ; then
+        pip install flash-attn==2.7.4.post1 --no-build-isolation
+    elif [ "$PLATFORM" = "hip" ] ; then
+        echo "[FLASHATTN] Prebuilt binaries not found. Building from source..."
+        mkdir -p /tmp/extensions
+        git clone --recursive https://github.com/ROCm/flash-attention.git /tmp/extensions/flash-attention
+        cd /tmp/extensions/flash-attention
+        git checkout tags/v2.7.3-cktile
+        GPU_ARCHS=gfx942 python setup.py install #MI300 series
+        cd $WORKDIR
+    else
+        echo "[FLASHATTN] Unsupported platform: $PLATFORM"
+    fi
+    echo "[SETUP] [FLASH-ATTN] END: flash-attention installed"
+fi
+
+if [ "$FLEXGEMM" = true ] ; then
+    echo "[SETUP] [FLEXGEMM] START: Install FlexGEMM"
+    mkdir -p /tmp/extensions
+    git clone --branch v1.0.0 https://github.com/JeffreyXiang/FlexGEMM.git /tmp/extensions/FlexGEMM --recursive
+    pip install /tmp/extensions/FlexGEMM --no-build-isolation
+    echo "[SETUP] [FLEXGEMM] END: FlexGEMM installed"
 fi
 
 echo "[SETUP] All requested steps completed"
