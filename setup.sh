@@ -86,12 +86,11 @@ if [ "$BASIC" = true ] ; then
     sudo apt install -y libjpeg-dev
     pip install pillow-simd
     pip install kornia timm
-    pip install flash-attn==2.7.4.post1 --no-build-isolation
 fi
 
 if [ "$FLASHATTN" = true ] ; then
     if [ "$PLATFORM" = "cuda" ] ; then
-        pip install flash-attn==2.7.3
+        pip install flash-attn==2.7.4.post1 --no-build-isolation
     elif [ "$PLATFORM" = "hip" ] ; then
         echo "[FLASHATTN] Prebuilt binaries not found. Building from source..."
         mkdir -p /tmp/extensions
