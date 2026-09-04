@@ -67,12 +67,16 @@ else
 fi
 
 if [ "$NEW_ENV" = true ] ; then
-    conda create -n trellis2 python=3.10
-    conda activate trellis2
+    # use pyenv to create a virtual environment
+    pyenv virtualenv 3.11.0 trellis2
+    touch .python-version
+    echo "trellis2" > .python-version
+    pyenv activate trellis2
+
     if [ "$PLATFORM" = "cuda" ] ; then
-        pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
+        pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124
     elif [ "$PLATFORM" = "hip" ] ; then
-        pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/rocm6.2.4
+        pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/rocm6.2.4
     fi
 fi
 
@@ -82,6 +86,7 @@ if [ "$BASIC" = true ] ; then
     sudo apt install -y libjpeg-dev
     pip install pillow-simd
     pip install kornia timm
+    pip install flash-attn==2.7.4.post1 --no-build-isolation
 fi
 
 if [ "$FLASHATTN" = true ] ; then
@@ -128,7 +133,7 @@ fi
 
 if [ "$FLEXGEMM" = true ] ; then
     mkdir -p /tmp/extensions
-    git clone https://github.com/JeffreyXiang/FlexGEMM.git /tmp/extensions/FlexGEMM --recursive
+    git clone --branch v1.0.0 https://github.com/JeffreyXiang/FlexGEMM.git /tmp/extensions/FlexGEMM --recursive
     pip install /tmp/extensions/FlexGEMM --no-build-isolation
 fi
 
