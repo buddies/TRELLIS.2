@@ -19,6 +19,39 @@ from trellis2.utils import render_utils
 import o_voxel
 
 
+def load_hdri(path: str) -> np.ndarray:
+    """Load an HDR (.exr) environment map as an RGB float32 numpy array.
+
+    OpenCV disables the OpenEXR codec by default (since 4.10), so ``cv2.imread``
+    returns an empty image for ``.exr`` files. If that happens, fall back to the
+    OpenEXR package, which supports every EXR compression scheme (incl. DWA-based
+    lossy compression used by these HDRI assets).
+    """
+    img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+    if img is not None and img.size > 0:
+        return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    try:
+        import OpenEXR
+        import Imath
+    except ImportError as e:
+        raise RuntimeError(
+            "OpenCV cannot decode the EXR file and the 'OpenEXR' package is not "
+            "installed. Install it with: pip install OpenEXR"
+        ) from e
+    f = OpenEXR.InputFile(path)
+    try:
+        dw = f.header()['dataWindow']
+        w = dw.max.x - dw.min.x + 1
+        h = dw.max.y - dw.min.y + 1
+        pt = Imath.PixelType(Imath.PixelType.FLOAT)
+        r = np.frombuffer(f.channel('R', pt), dtype=np.float32).reshape(h, w)
+        g = np.frombuffer(f.channel('G', pt), dtype=np.float32).reshape(h, w)
+        b = np.frombuffer(f.channel('B', pt), dtype=np.float32).reshape(h, w)
+    finally:
+        f.close()
+    return np.stack([r, g, b], axis=-1)
+
+
 MAX_SEED = np.iinfo(np.int32).max
 TMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tmp')
 MODES = [
@@ -627,19 +660,14 @@ if __name__ == "__main__":
     pipeline = Trellis2ImageTo3DPipeline.from_pretrained('microsoft/TRELLIS.2-4B')
     pipeline.cuda()
     
+    def make_envmap(name: str):
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'hdri', f'{name}.exr')
+        return EnvMap(torch.tensor(load_hdri(path), dtype=torch.float32, device='cuda'))
+
     envmap = {
-        'forest': EnvMap(torch.tensor(
-            cv2.cvtColor(cv2.imread('assets/hdri/forest.exr', cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB),
-            dtype=torch.float32, device='cuda'
-        )),
-        'sunset': EnvMap(torch.tensor(
-            cv2.cvtColor(cv2.imread('assets/hdri/sunset.exr', cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB),
-            dtype=torch.float32, device='cuda'
-        )),
-        'courtyard': EnvMap(torch.tensor(
-            cv2.cvtColor(cv2.imread('assets/hdri/courtyard.exr', cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB),
-            dtype=torch.float32, device='cuda'
-        )),
+        'forest': make_envmap('forest'),
+        'sunset': make_envmap('sunset'),
+        'courtyard': make_envmap('courtyard'),
     }
     
     demo.launch(css=css, head=head)
