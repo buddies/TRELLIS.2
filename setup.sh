@@ -56,6 +56,7 @@ if [ "$HELP" = true ] ; then
 fi
 
 # Get system information
+echo "[SETUP] [SYSTEM INFO] START: Detect platform"
 WORKDIR=$(pwd)
 if command -v nvidia-smi > /dev/null; then
     PLATFORM="cuda"
@@ -65,8 +66,10 @@ else
     echo "Error: No supported GPU found"
     exit 1
 fi
+echo "[SETUP] [SYSTEM INFO] END: Detected platform=$PLATFORM"
 
 if [ "$NEW_ENV" = true ] ; then
+    echo "[SETUP] [NEW-ENV] START: Create new conda environment"
     # use pyenv to create a virtual environment
     pyenv virtualenv 3.11.0 trellis2
     touch .python-version
@@ -78,17 +81,21 @@ if [ "$NEW_ENV" = true ] ; then
     elif [ "$PLATFORM" = "hip" ] ; then
         pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/rocm6.2.4
     fi
+    echo "[SETUP] [NEW-ENV] END: Environment created"
 fi
 
 if [ "$BASIC" = true ] ; then
+    echo "[SETUP] [BASIC] START: Install basic dependencies"
     pip install imageio imageio-ffmpeg tqdm easydict opencv-python-headless ninja trimesh transformers gradio==6.0.1 tensorboard pandas lpips zstandard modelscope
     pip install git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8
     sudo apt install -y libjpeg-dev
     pip install pillow-simd
     pip install kornia timm
+    echo "[SETUP] [BASIC] END: Basic dependencies installed"
 fi
 
 if [ "$FLASHATTN" = true ] ; then
+    echo "[SETUP] [FLASH-ATTN] START: Install flash-attention"
     if [ "$PLATFORM" = "cuda" ] ; then
         pip install flash-attn==2.7.4.post1 --no-build-isolation
     elif [ "$PLATFORM" = "hip" ] ; then
@@ -102,9 +109,11 @@ if [ "$FLASHATTN" = true ] ; then
     else
         echo "[FLASHATTN] Unsupported platform: $PLATFORM"
     fi
+    echo "[SETUP] [FLASH-ATTN] END: flash-attention installed"
 fi
 
 if [ "$NVDIFFRAST" = true ] ; then
+    echo "[SETUP] [NVDIFFRAST] START: Install nvdiffrast"
     if [ "$PLATFORM" = "cuda" ] ; then
         mkdir -p /tmp/extensions
         git clone -b v0.4.0 https://github.com/NVlabs/nvdiffrast.git /tmp/extensions/nvdiffrast
@@ -112,9 +121,11 @@ if [ "$NVDIFFRAST" = true ] ; then
     else
         echo "[NVDIFFRAST] Unsupported platform: $PLATFORM"
     fi
+    echo "[SETUP] [NVDIFFRAST] END: nvdiffrast installed"
 fi
 
 if [ "$NVDIFFREC" = true ] ; then
+    echo "[SETUP] [NVDIFFREC] START: Install nvdiffrec"
     if [ "$PLATFORM" = "cuda" ] ; then
         mkdir -p /tmp/extensions
         git clone -b renderutils https://github.com/JeffreyXiang/nvdiffrec.git /tmp/extensions/nvdiffrec
@@ -122,22 +133,31 @@ if [ "$NVDIFFREC" = true ] ; then
     else
         echo "[NVDIFFREC] Unsupported platform: $PLATFORM"
     fi
+    echo "[SETUP] [NVDIFFREC] END: nvdiffrec installed"
 fi
 
 if [ "$CUMESH" = true ] ; then
+    echo "[SETUP] [CUMESH] START: Install CuMesh"
     mkdir -p /tmp/extensions
     git clone https://github.com/JeffreyXiang/CuMesh.git /tmp/extensions/CuMesh --recursive
     pip install /tmp/extensions/CuMesh --no-build-isolation
+    echo "[SETUP] [CUMESH] END: CuMesh installed"
 fi
 
 if [ "$FLEXGEMM" = true ] ; then
+    echo "[SETUP] [FLEXGEMM] START: Install FlexGEMM"
     mkdir -p /tmp/extensions
     git clone --branch v1.0.0 https://github.com/JeffreyXiang/FlexGEMM.git /tmp/extensions/FlexGEMM --recursive
     pip install /tmp/extensions/FlexGEMM --no-build-isolation
+    echo "[SETUP] [FLEXGEMM] END: FlexGEMM installed"
 fi
 
 if [ "$OVOXEL" = true ] ; then
+    echo "[SETUP] [O-VOXEL] START: Install o-voxel"
     mkdir -p /tmp/extensions
     cp -r o-voxel /tmp/extensions/o-voxel
     pip install /tmp/extensions/o-voxel --no-build-isolation
+    echo "[SETUP] [O-VOXEL] END: o-voxel installed"
 fi
+
+echo "[SETUP] All requested steps completed"
